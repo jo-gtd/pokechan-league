@@ -334,77 +334,89 @@
       '</div>';
   }
 
-  /* ---------------- current matchups (dynamic pairing) ----------------
-     No fixed round list. Instead, every team that is currently "free"
-     (not sitting on an unplayed match already offered to it this pass)
-     gets auto-paired with another free team it hasn't played yet, in
-     team-registration order. The moment someone enters a result, both
-     of that match's teams become free again on the next render and get
-     paired with whichever other free teams are available — so finishing
-     a match immediately queues up a new one, with no fixed schedule to
-     maintain. Purely derived from the results matrix — nothing extra to
-     store, and every viewer computes the same pairing from the same
-     data. */
-  function computeCurrentMatchups(state){
-    var teams = state.teams;
-    var n = teams.length;
+  /* ---------------- current matchups (dynamic, but STABLE, pairing) ----------------
+     `state.currentPairs` (an array of [teamA, teamB] name pairs) is the
+     persisted, shared record of who is matched up against whom right
+     now. It is NOT recomputed from scratch on every render — that was
+     the earlier bug: recomputing fresh every time reshuffled matches
+     that hadn't even finished yet, just because some unrelated team
+     became free. Instead, reconcileCurrentPairs only (a) drops pairs
+     whose result has now been entered, freeing those two teams, then
+     (b) fills any newly-free slots by matching up free teams (in
+     registration order) that haven't played each other — every OTHER
+     already-active pairing is left untouched. */
+  function isPlayed(state, teamA, teamB){
+    var i = state.teams.indexOf(teamA), j = state.teams.indexOf(teamB);
+    if(i < 0 || j < 0) return true; // team renamed/removed elsewhere — drop this pair
     var cells = state.legs[0].cells;
-    var played = function(i, j){
-      var r = cells[i] ? cells[i][j] : null;
-      return r === "W" || r === "D" || r === "L";
-    };
+    var r = cells[i] ? cells[i][j] : null;
+    return r === "W" || r === "D" || r === "L";
+  }
 
-    var remainingOpponents = teams.map(function(_, i){
-      var list = [];
-      for(var j = 0; j < n; j++){
-        if(j !== i && !played(i, j)) list.push(j);
-      }
-      return list;
+  function reconcileCurrentPairs(state){
+    if(!Array.isArray(state.currentPairs)) state.currentPairs = [];
+
+    // 1) drop pairs that have been decided since they were offered
+    state.currentPairs = state.currentPairs.filter(function(p){
+      return !isPlayed(state, p[0], p[1]);
     });
 
-    var assigned = new Array(n).fill(false);
-    var pairs = [];
-    for(var i = 0; i < n; i++){
-      if(assigned[i] || remainingOpponents[i].length === 0) continue;
-      var partner = -1;
-      for(var k = 0; k < remainingOpponents[i].length; k++){
-        var cand = remainingOpponents[i][k];
-        if(!assigned[cand]){ partner = cand; break; }
-      }
-      if(partner !== -1){
-        assigned[i] = true;
-        assigned[partner] = true;
-        pairs.push([i, partner]);
-      }
+    // 2) who's currently tied up in an active pairing
+    var busy = {};
+    state.currentPairs.forEach(function(p){ busy[p[0]] = true; busy[p[1]] = true; });
+
+    var teams = state.teams;
+    function remainingOpponents(name){
+      var list = [];
+      teams.forEach(function(other){
+        if(other !== name && !isPlayed(state, name, other)) list.push(other);
+      });
+      return list;
     }
 
-    var waiting = [];
-    for(var t = 0; t < n; t++){
-      if(!assigned[t] && remainingOpponents[t].length > 0) waiting.push(t);
-    }
-    var allDone = pairs.length === 0 && waiting.length === 0;
+    // 3) fill free slots — teams still without a partner AND with at
+    //    least one unplayed opponent get matched, in registration order
+    teams.forEach(function(a){
+      if(busy[a]) return;
+      var opponents = remainingOpponents(a);
+      if(opponents.length === 0) return;
+      var partner = null;
+      for(var k = 0; k < opponents.length; k++){
+        if(!busy[opponents[k]]){ partner = opponents[k]; break; }
+      }
+      if(partner){
+        state.currentPairs.push([a, partner]);
+        busy[a] = true;
+        busy[partner] = true;
+      }
+    });
 
-    return {
-      pairs: pairs.map(function(p){ return [teams[p[0]], teams[p[1]]]; }),
-      waiting: waiting.map(function(idx){ return teams[idx]; }),
-      allDone: allDone
-    };
+    return state.currentPairs;
   }
 
   function renderSchedule(state){
     var teams = state.teams;
     if(teams.length < 2) return "";
-    var m = computeCurrentMatchups(state);
+    var pairs = state.currentPairs || [];
+    var busy = {};
+    pairs.forEach(function(p){ busy[p[0]] = true; busy[p[1]] = true; });
+    var waiting = teams.filter(function(name){
+      if(busy[name]) return false;
+      return teams.some(function(other){
+        return other !== name && !isPlayed(state, name, other);
+      });
+    });
+    var allDone = pairs.length === 0 && waiting.length === 0;
 
     var body;
-    if(m.allDone){
+    if(allDone){
       body = '<div class="bye-row">全ての対戦が終了しました。お疲れさまでした！</div>';
     } else {
-      var pairsHtml = m.pairs.map(function(p){
+      var pairsHtml = pairs.map(function(p){
         return '<div class="match-row"><span class="team-a">' + esc(p[0]) + '</span><span class="vs">vs</span><span class="team-b">' + esc(p[1]) + '</span></div>';
       }).join("");
-      var waitingHtml = m.waiting.length
-        ? '<div class="bye-row">待機中：' + m.waiting.map(esc).join('、') + '</div>'
+      var waitingHtml = waiting.length
+        ? '<div class="bye-row">待機中：' + waiting.map(esc).join('、') + '</div>'
         : "";
       body = pairsHtml + waitingHtml;
     }
@@ -446,6 +458,7 @@
     if(!state.legs[legIndex].cells[row]) return;
     state.legs[legIndex].cells[row][col] = value || null;
     state.legs[legIndex].cells[col][row] = mirror;
+    reconcileCurrentPairs(state);
     render();
     saveState();
   }
@@ -495,9 +508,19 @@
             setStatus("保存データの読み込みに失敗しました。", "error");
             return;
           }
+          // Self-heal older saved data that predates currentPairs: bootstrap
+          // it once and persist, so the pairing becomes stable from here on.
+          if(!Array.isArray(state.currentPairs)){
+            reconcileCurrentPairs(state);
+            suppressNextSnapshot = true;
+            docRef.set({json: JSON.stringify(state)}).catch(function(){});
+          }
           render();
         } else {
-          // first run: seed the document so future viewers see the same data
+          // first run: seed the document (with an initial pairing) so
+          // future viewers see the same data
+          reconcileCurrentPairs(state);
+          render();
           docRef.set({json: JSON.stringify(state)}).catch(function(){});
         }
       }, function(err){
