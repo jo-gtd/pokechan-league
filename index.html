@@ -89,8 +89,7 @@
     background:var(--surface-2);font-size:11.5px;font-weight:700;color:var(--text);
     padding:7px 8px;white-space:nowrap;line-height:1.25;
   }
-  table.matrix th.col-record{background:var(--surface-2);font-size:11px;color:var(--text-muted);white-space:nowrap;padding:6px 8px;line-height:1.5}
-  table.matrix th.col-record .legend{display:block;font-size:9.5px;font-weight:400;opacity:.75}
+  table.matrix th.col-record{background:var(--surface-2);font-size:11px;color:var(--text-muted);white-space:nowrap;padding:6px 8px}
   table.matrix th.col-rank{background:var(--surface-2);font-size:11px;color:var(--text-muted);white-space:nowrap;padding:6px 8px}
   table.matrix td.row-head{
     background:var(--surface-2);font-size:12px;font-weight:700;text-align:left;
@@ -116,7 +115,7 @@
   table.matrix td.record b.win{color:var(--accent-strong)}
   table.matrix td.record b.loss{color:var(--danger)}
   table.matrix td.record b.draw{color:var(--text-muted)}
-  table.matrix td.record .sep{color:var(--border);padding:0 1px}
+  table.matrix td.record .sep{color:var(--text-muted);padding:0 2px}
   table.matrix td.rank{font-weight:900;font-size:14px;font-variant-numeric:tabular-nums;color:var(--accent-strong)}
   table.matrix tr.rank1 td.rank{color:var(--gold)}
   table.matrix tr.rank1 td.row-head{color:var(--gold)}
@@ -324,7 +323,7 @@
       '<table class="matrix">' +
         '<thead><tr>' +
           '<th class="corner"></th>' + headCells +
-          '<th class="col-record">成績<span class="legend">（勝-負-分）</span></th><th class="col-rank">順位</th>' +
+          '<th class="col-record" title="勝-負-分の順">成績</th><th class="col-rank">順位</th>' +
         '</tr></thead>' +
         '<tbody>' + bodyRows + '</tbody>' +
       '</table>' +
