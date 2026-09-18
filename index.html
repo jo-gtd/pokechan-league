@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ポケチャン最強決定戦</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Zen+Old+Mincho:wght@600&display=swap">
+<style>
+  :root{
+    --bg:#f5f7f2;
+    --surface:#ffffff;
+    --surface-2:#eef1ea;
+    --border:#dde2d5;
+    --text:#1e2b21;
+    --text-muted:#63715f;
+    --accent:#2f6b4f;
+    --accent-strong:#204d39;
+    --accent-soft:#dcefe2;
+    --gold:#c1892f;
+    --gold-soft:#f5e7cd;
+    --danger:#b0432f;
+    --danger-soft:#f6e2dc;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#151a15;
+      --surface:#1d241d;
+      --surface-2:#242c23;
+      --border:#333d31;
+      --text:#eaf0e6;
+      --text-muted:#9caa96;
+      --accent:#5fae86;
+      --accent-strong:#7cc49f;
+      --accent-soft:#233d2e;
+      --gold:#d9ab55;
+      --gold-soft:#3a2f18;
+      --danger:#e08066;
+      --danger-soft:#3d251f;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#151a15;
+    --surface:#1d241d;
+    --surface-2:#242c23;
+    --border:#333d31;
+    --text:#eaf0e6;
+    --text-muted:#9caa96;
+    --accent:#5fae86;
+    --accent-strong:#7cc49f;
+    --accent-soft:#233d2e;
+    --gold:#d9ab55;
+    --gold-soft:#3a2f18;
+    --danger:#e08066;
+    --danger-soft:#3d251f;
+    color-scheme: dark;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text)}
+  body{
+    font-family:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+    padding-inline:16px;
+    padding-block:20px;
+    font-size:15px;
+    line-height:1.6;
+  }
+  [hidden]{display:none!important}
+  .wrap{max-width:920px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+
+  .sheet{
+    border:2.5px solid var(--text);border-radius:4px;overflow:hidden;
+    background:var(--surface);
+  }
+  .sheet-title{
+    font-weight:700;font-size:15px;letter-spacing:.04em;
+    padding:11px 12px;border-bottom:2.5px solid var(--text);
+    background:var(--surface-2);text-align:center;
+  }
+
+  .table-scroll{overflow-x:auto}
+  table.matrix{border-collapse:collapse;table-layout:fixed}
+  table.matrix th, table.matrix td{
+    border:1px solid var(--border);padding:0;text-align:center;vertical-align:middle;
+  }
+  table.matrix th.corner{background:var(--surface-2);width:92px}
+  table.matrix th.col-head{
+    background:var(--surface-2);font-size:11.5px;font-weight:700;color:var(--text);
+    padding:7px 3px;overflow-wrap:break-word;line-height:1.25;width:64px;
+  }
+  table.matrix th.col-record{background:var(--surface-2);font-size:11px;color:var(--text-muted);width:100px;padding:6px 3px}
+  table.matrix th.col-rank{background:var(--surface-2);font-size:11px;color:var(--text-muted);width:48px;padding:6px 2px}
+  table.matrix td.row-head{
+    background:var(--surface-2);font-size:12px;font-weight:700;text-align:left;
+    padding:8px 8px;overflow-wrap:break-word;line-height:1.25;
+  }
+  table.matrix td.diag{
+    background:repeating-linear-gradient(135deg, var(--border), var(--border) 1px, transparent 1px, transparent 10px), var(--surface-2);
+  }
+  table.matrix td.cell{padding:2px}
+  table.matrix select.result-cell{
+    width:100%;min-height:44px;border:none;background:transparent;color:var(--text-muted);
+    text-align:center;text-align-last:center;font-size:14.5px;font-weight:700;font-family:inherit;cursor:pointer;
+    border-radius:0;-webkit-appearance:none;appearance:none;padding:0 4px;
+  }
+  table.matrix select.result-cell:hover{background:var(--surface-2)}
+  table.matrix select.result-cell:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  table.matrix select.result-cell[data-result="W"]{color:var(--accent-strong);background:var(--accent-soft)}
+  table.matrix select.result-cell[data-result="L"]{color:var(--danger);background:var(--danger-soft)}
+  table.matrix select.result-cell[data-result="D"]{color:var(--text-muted);background:var(--surface-2)}
+  table.matrix select.result-cell:disabled{cursor:default}
+  table.matrix td.record{font-size:11.5px;color:var(--text-muted);font-variant-numeric:tabular-nums;padding:6px 3px;letter-spacing:.02em}
+  table.matrix td.record b{color:var(--text);font-weight:700}
+  table.matrix td.rank{font-weight:900;font-size:14px;font-variant-numeric:tabular-nums;color:var(--accent-strong)}
+  table.matrix tr.rank1 td.rank{color:var(--gold)}
+  table.matrix tr.rank1 td.row-head{color:var(--gold)}
+
+  .status{
+    font-size:12px;color:var(--text-muted);text-align:center;min-height:1.4em;
+  }
+  .status[data-state="error"]{color:var(--danger)}
+
+  @media (max-width:480px){
+    table.matrix th.corner{width:72px}
+    table.matrix th.col-head{width:52px;font-size:10.5px}
+    table.matrix th.col-record{width:82px}
+    table.matrix th.col-rank{width:40px}
+    table.matrix td.row-head{font-size:11px;padding:7px 5px}
+    table.matrix td.record{font-size:10px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <main id="app">
+    <div class="sheet"><div class="sheet-title">読み込み中…</div></div>
+  </main>
+  <div class="status" id="statusLine"></div>
+</div>
+
+<!-- Firebase (compat build — no bundler needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
+<script>
+(function(){
+  "use strict";
+
+  /* =========================================================
+     1) FIREBASE SETUP — paste your own project's config here.
+     Get this from: Firebase console > Project settings >
+     "Your apps" > Web app > SDK setup and configuration.
+     This is safe to expose publicly; it is not a secret key —
+     access is controlled by the Firestore security rules you
+     set in the Firebase console (see README.md in this folder).
+     ========================================================= */
+  var firebaseConfig = {
+    apiKey: "AIzaSyDzNCeEbjRFJNXf0zzocKoXQXj_3YFVe6I",
+    authDomain: "pokechan-league.firebaseapp.com",
+    projectId: "pokechan-league",
+    storageBucket: "pokechan-league.firebasestorage.app",
+    messagingSenderId: "944435992586",
+    appId: "1:944435992586:web:3a6f1118fdbfcc5dc0e7f3"
+  };
+
+  var DOC_PATH = "state/main"; // one shared document holds the whole league
+
+  /* ---------------- default state (used only until Firestore
+     delivers the real document, or if it doesn't exist yet) ---------------- */
+  var DEFAULT_STATE = {
+    leagueName: "ポケチャン最強決定戦",
+    teams: ["こうたろう","じゅんた","KAZUKI","直太朗","ともや","ゆうと","がっきー","じょう"],
+    pointRule: {win:3, draw:1, loss:0},
+    doubleRound: false,
+    legs: [{cells: emptyMatrix(8)}]
+  };
+
+  function emptyMatrix(n){
+    var m = [];
+    for(var i=0;i<n;i++){ m.push(new Array(n).fill(null)); }
+    return m;
+  }
+
+  var state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+  var db = null;
+  var docRef = null;
+  var isWriter = true;
+  var suppressNextSnapshot = false; // avoid re-rendering from our own write echo mid-edit
+
+  /* ---------------- standings ---------------- */
+  function computeStandings(state){
+    var n = state.teams.length;
+    var rows = state.teams.map(function(t){
+      return {team:t, played:0, win:0, draw:0, loss:0, pts:0};
+    });
+    state.legs.forEach(function(leg){
+      for(var i=0;i<n;i++){
+        for(var j=0;j<n;j++){
+          if(i === j) continue;
+          var r = leg.cells[i] ? leg.cells[i][j] : null;
+          if(r !== "W" && r !== "D" && r !== "L") continue;
+          var ri = rows[i];
+          ri.played++;
+          if(r === "W"){ ri.win++; ri.pts += state.pointRule.win; }
+          else if(r === "L"){ ri.loss++; ri.pts += state.pointRule.loss; }
+          else { ri.draw++; ri.pts += state.pointRule.draw; }
+        }
+      }
+    });
+    var ranked = rows.map(function(r, i){ return {row:r, teamIndex:i}; });
+    ranked.sort(function(a,b){
+      var ra = a.row, rb = b.row;
+      if(rb.pts !== ra.pts) return rb.pts - ra.pts;
+      if(rb.win !== ra.win) return rb.win - ra.win;
+      return ra.team.localeCompare(rb.team, "ja");
+    });
+    var rankByIndex = new Array(n);
+    ranked.forEach(function(entry, pos){ rankByIndex[entry.teamIndex] = pos + 1; });
+    return {rows: rows, rankByIndex: rankByIndex};
+  }
+
+  /* ---------------- rendering ---------------- */
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  var RESULT_LABEL = {"":"未", W:"勝", D:"分", L:"負"};
+
+  function resultCell(state, legIndex, i, j){
+    var val = (state.legs[legIndex].cells[i] && state.legs[legIndex].cells[i][j]) || "";
+    var label = esc(state.teams[i]) + ' vs ' + esc(state.teams[j]) + 'の結果';
+    var opts = ["", "W", "D", "L"].map(function(v){
+      return '<option value="' + v + '"' + (v === val ? ' selected' : '') + '>' + RESULT_LABEL[v] + '</option>';
+    }).join("");
+    return '<td class="cell"><select class="result-cell" data-field="result" data-leg="' + legIndex + '" data-row="' + i + '" data-col="' + j + '" ' +
+      (val ? 'data-result="' + val + '" ' : '') +
+      'aria-label="' + label + '">' + opts + '</select></td>';
+  }
+
+  function renderMatrix(state, legIndex, standings){
+    var teams = state.teams;
+    var n = teams.length;
+    var headCells = teams.map(function(t){
+      return '<th class="col-head">' + esc(t) + '</th>';
+    }).join("");
+
+    var bodyRows = teams.map(function(t, i){
+      var cells = "";
+      for(var j=0;j<n;j++){
+        cells += (i === j) ? '<td class="diag"></td>' : resultCell(state, legIndex, i, j);
+      }
+      var r = standings.rows[i];
+      var rank = standings.rankByIndex[i];
+      var isTop = (rank === 1 && r.played > 0);
+      return '' +
+        '<tr class="' + (isTop ? "rank1" : "") + '">' +
+          '<td class="row-head">' + esc(t) + '</td>' +
+          cells +
+          '<td class="record">' +
+            '<b>' + r.win + '</b>勝 <b>' + r.loss + '</b>負 <b>' + r.draw + '</b>分' +
+          '</td>' +
+          '<td class="rank">' + (r.played > 0 ? rank : "―") + '</td>' +
+        '</tr>';
+    }).join("");
+
+    return '' +
+      '<div class="table-scroll">' +
+      '<table class="matrix">' +
+        '<thead><tr>' +
+          '<th class="corner"></th>' + headCells +
+          '<th class="col-record">成績</th><th class="col-rank">順位</th>' +
+        '</tr></thead>' +
+        '<tbody>' + bodyRows + '</tbody>' +
+      '</table>' +
+      '</div>';
+  }
+
+  function render(){
+    var standings = computeStandings(state);
+    var legsHtml = state.legs.map(function(leg, li){
+      return renderMatrix(state, li, standings);
+    }).join("");
+    var app = document.getElementById("app");
+    app.innerHTML = '' +
+      '<div class="sheet">' +
+        '<div class="sheet-title">' + esc(state.leagueName) + '　対戦表</div>' +
+        legsHtml +
+      '</div>';
+    if(!isWriter){
+      app.querySelectorAll("select").forEach(function(s){ s.disabled = true; });
+    }
+  }
+
+  function setStatus(text, kind){
+    var el = document.getElementById("statusLine");
+    if(!el) return;
+    el.textContent = text || "";
+    if(kind) el.setAttribute("data-state", kind); else el.removeAttribute("data-state");
+  }
+
+  /* ---------------- writes ---------------- */
+  function writeResult(legIndex, row, col, value){
+    var mirror = value === "W" ? "L" : value === "L" ? "W" : value; // "D"/null mirrors itself
+    if(!state.legs[legIndex].cells[row]) return;
+    state.legs[legIndex].cells[row][col] = value || null;
+    state.legs[legIndex].cells[col][row] = mirror;
+    render();
+    saveState();
+  }
+
+  var saveTimer = null;
+  function saveState(){
+    if(!docRef){ setStatus("データベースに接続できていません。", "error"); return; }
+    if(saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(function(){
+      setStatus("保存中…");
+      suppressNextSnapshot = true;
+      docRef.set(state).then(function(){
+        setStatus("");
+      }).catch(function(err){
+        setStatus("保存に失敗しました：" + err.message, "error");
+      });
+    }, 150);
+  }
+
+  document.addEventListener("change", function(e){
+    var t = e.target;
+    if(!t.dataset || t.dataset.field !== "result") return;
+    writeResult(Number(t.dataset.leg), Number(t.dataset.row), Number(t.dataset.col), t.value);
+  });
+
+  /* ---------------- Firestore wiring ---------------- */
+  function init(){
+    render(); // paint default/sample state immediately so the page is never empty
+    try{
+      if(!window.firebase || firebaseConfig.apiKey === "YOUR_API_KEY"){
+        setStatus("Firebaseの設定が未入力です（index.html内のfirebaseConfigを編集してください）。プレビュー表示のみです。", "error");
+        return;
+      }
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+      docRef = db.doc(DOC_PATH);
+
+      docRef.onSnapshot(function(snap){
+        if(suppressNextSnapshot){ suppressNextSnapshot = false; return; }
+        if(snap.exists){
+          state = snap.data();
+          render();
+        } else {
+          // first run: seed the document so future viewers see the same data
+          docRef.set(state).catch(function(){});
+        }
+      }, function(err){
+        setStatus("読み込みに失敗しました：" + err.message, "error");
+      });
+    }catch(err){
+      setStatus("初期化に失敗しました：" + err.message, "error");
+    }
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

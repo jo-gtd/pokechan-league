@@ -1,0 +1,21 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // "state/main" is the single document that holds the whole league
+    // (team names, results, point rule). Open to anyone — no login
+    // required — matching "anyone with the URL can edit".
+    //
+    // Trade-off: this also means anyone who discovers your Firebase
+    // project's config (visible in index.html, since it's a public
+    // client app) could write to this same document directly via the
+    // Firebase API, not just through the page. For a small
+    // family/friends league table this is normally an acceptable
+    // risk. If you ever want to lock it down, the simplest upgrade is
+    // Firebase Anonymous Auth + a rule that only allows writes from
+    // signed-in (even anonymous) users.
+    match /state/main {
+      allow read, write: if true;
+    }
+    // Everything else stays closed by default.
+  }
+}
