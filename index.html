@@ -318,7 +318,10 @@
     saveTimer = setTimeout(function(){
       setStatus("保存中…");
       suppressNextSnapshot = true;
-      docRef.set(state).then(function(){
+      // Firestore documents can't hold an "array of arrays" (our match
+      // grid is one), so the whole state is stored as a single JSON
+      // string field instead of as native Firestore fields.
+      docRef.set({json: JSON.stringify(state)}).then(function(){
         setStatus("");
       }).catch(function(err){
         setStatus("保存に失敗しました：" + err.message, "error");
@@ -346,12 +349,17 @@
 
       docRef.onSnapshot(function(snap){
         if(suppressNextSnapshot){ suppressNextSnapshot = false; return; }
-        if(snap.exists){
-          state = snap.data();
+        if(snap.exists && snap.data().json){
+          try{
+            state = JSON.parse(snap.data().json);
+          }catch(e){
+            setStatus("保存データの読み込みに失敗しました。", "error");
+            return;
+          }
           render();
         } else {
           // first run: seed the document so future viewers see the same data
-          docRef.set(state).catch(function(){});
+          docRef.set({json: JSON.stringify(state)}).catch(function(){});
         }
       }, function(err){
         setStatus("読み込みに失敗しました：" + err.message, "error");
