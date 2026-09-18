@@ -208,15 +208,60 @@
         }
       }
     });
-    var ranked = rows.map(function(r, i){ return {row:r, teamIndex:i}; });
-    ranked.sort(function(a,b){
-      var ra = a.row, rb = b.row;
-      if(rb.pts !== ra.pts) return rb.pts - ra.pts;
-      if(rb.win !== ra.win) return rb.win - ra.win;
-      return ra.team.localeCompare(rb.team, "ja");
-    });
+
+    // Points a team earned across all legs against one specific opponent —
+    // used only to break ties among teams that already share equal pts.
+    function h2hPoints(i, j){
+      var pts = 0;
+      state.legs.forEach(function(leg){
+        var r = leg.cells[i] ? leg.cells[i][j] : null;
+        if(r === "W") pts += state.pointRule.win;
+        else if(r === "L") pts += state.pointRule.loss;
+        else if(r === "D") pts += state.pointRule.draw;
+      });
+      return pts;
+    }
+
+    var indices = rows.map(function(r, i){ return i; });
+    indices.sort(function(a, b){ return rows[b].pts - rows[a].pts; });
+
+    // Walk pts-tiers; within each tier of 2+ teams, sub-rank by points
+    // earned ONLY in matches among that tied group (head-to-head). Teams
+    // that are still equal after that (including a head-to-head draw)
+    // share the same rank — ranks then skip ahead by the tier size, the
+    // usual "1,1,3" competition-ranking convention.
     var rankByIndex = new Array(n);
-    ranked.forEach(function(entry, pos){ rankByIndex[entry.teamIndex] = pos + 1; });
+    var i = 0;
+    var nextRank = 1;
+    while(i < indices.length){
+      var j = i;
+      while(j + 1 < indices.length && rows[indices[j + 1]].pts === rows[indices[i]].pts) j++;
+      var tier = indices.slice(i, j + 1);
+
+      if(tier.length === 1){
+        rankByIndex[tier[0]] = nextRank;
+        nextRank += 1;
+      } else {
+        var sub = tier.map(function(teamIdx){
+          var s = 0;
+          tier.forEach(function(otherIdx){
+            if(otherIdx !== teamIdx) s += h2hPoints(teamIdx, otherIdx);
+          });
+          return {teamIdx: teamIdx, sub: s};
+        });
+        sub.sort(function(a, b){ return b.sub - a.sub; });
+        var k = 0;
+        while(k < sub.length){
+          var l = k;
+          while(l + 1 < sub.length && sub[l + 1].sub === sub[k].sub) l++;
+          for(var m = k; m <= l; m++){ rankByIndex[sub[m].teamIdx] = nextRank; }
+          nextRank += (l - k + 1);
+          k = l + 1;
+        }
+      }
+      i = j + 1;
+    }
+
     return {rows: rows, rankByIndex: rankByIndex};
   }
 
