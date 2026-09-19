@@ -193,7 +193,6 @@
   var db = null;
   var docRef = null;
   var isWriter = true;
-  var suppressNextSnapshot = false; // avoid re-rendering from our own write echo mid-edit
 
   /* ---------------- standings ---------------- */
   function computeStandings(state){
@@ -465,7 +464,6 @@
     if(saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(function(){
       setStatus("保存中…");
-      suppressNextSnapshot = true;
       // Firestore documents can't hold an "array of arrays" (our match
       // grid is one), so the whole state is stored as a single JSON
       // string field instead of as native Firestore fields.
@@ -496,7 +494,6 @@
       docRef = db.doc(DOC_PATH);
 
       docRef.onSnapshot(function(snap){
-        if(suppressNextSnapshot){ suppressNextSnapshot = false; return; }
         if(snap.exists && snap.data().json){
           try{
             state = JSON.parse(snap.data().json);
@@ -508,7 +505,6 @@
           // it once and persist, so the pairing becomes stable from here on.
           if(!Array.isArray(state.currentPairs)){
             reconcileCurrentPairs(state);
-            suppressNextSnapshot = true;
             docRef.set({json: JSON.stringify(state)}).catch(function(){});
           }
           render();
